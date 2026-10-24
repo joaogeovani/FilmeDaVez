@@ -23,3 +23,4 @@ local.properties
 key.properties
 *.jks
 *.keystore
+/.idea/deploymentTargetSelector.xml
