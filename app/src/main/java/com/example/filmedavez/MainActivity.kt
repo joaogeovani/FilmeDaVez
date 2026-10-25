@@ -18,10 +18,11 @@ import com.example.filmedavez.ui.screens.TelaSelecaoGeneros
 import com.example.filmedavez.ui.theme.FilmeDaVezTheme
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import com.example.filmedavez.data.remote.RetrofitClient
-import com.example.filmedavez.data.remote.dto.FilmeDto
-import kotlinx.coroutines.CancellationException
-import retrofit2.HttpException
+import com.example.filmedavez.ui.screens.TelaSelecaoPalavrasChave
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.filmedavez.ui.viewmodel.FilmesViewModel
+import com.example.filmedavez.ui.viewmodel.EstadoBuscaFilmes
 
 
 class MainActivity : ComponentActivity() {
@@ -43,12 +44,17 @@ class MainActivity : ComponentActivity() {
                     mutableStateOf(emptyList<Int>())
                 }
 
+                var palavrasChaveSelecionadas by rememberSaveable {
+                    mutableStateOf(emptyList<String>())
+                }
+
                 // Controla o botão Voltar do Android
                 BackHandler(enabled = telaAtual != "inicio") {
-                    telaAtual = if (telaAtual == "resumo") {
-                        "generos"
-                    } else {
-                        "inicio"
+                    telaAtual = when (telaAtual) {
+                        "resumo" -> "palavras"
+                        "palavras" -> "generos"
+                        "generos" -> "inicio"
+                        else -> "inicio"
                     }
                 }
 
@@ -79,7 +85,7 @@ class MainActivity : ComponentActivity() {
                             },
 
                             onContinuar = {
-                                telaAtual = "resumo"
+                                telaAtual = "palavras"
                             },
 
                             onVoltar = {
@@ -87,17 +93,53 @@ class MainActivity : ComponentActivity() {
                             }
                         )
 
+                        "palavras" -> TelaSelecaoPalavrasChave(
+                            modifier = Modifier.padding(innerPadding),
+
+                            palavrasChave = palavrasChaveSelecionadas,
+
+                            onAdicionarPalavra = { novaPalavra ->
+                                val palavra = novaPalavra.trim()
+
+                                if (
+                                    palavra.isNotEmpty() &&
+                                    palavrasChaveSelecionadas.size < 5 &&
+                                    palavrasChaveSelecionadas.none {
+                                        it.equals(palavra, ignoreCase = true)
+                                    }
+                                ) {
+                                    palavrasChaveSelecionadas =
+                                        palavrasChaveSelecionadas + palavra
+                                }
+                            },
+
+                            onRemoverPalavra = { palavra ->
+                                palavrasChaveSelecionadas =
+                                    palavrasChaveSelecionadas - palavra
+                            },
+
+                            onContinuar = {
+                                telaAtual = "resumo"
+                            },
+
+                            onVoltar = {
+                                telaAtual = "generos"
+                            }
+                        )
+
+
                         "resumo" -> TelaResumo(
                             modifier = Modifier.padding(innerPadding),
 
                             idsGeneros = generosSelecionados,
+                            palavrasChave = palavrasChaveSelecionadas,
 
                             nomesGeneros = generosDisponiveis
                                 .filter { it.id in generosSelecionados }
                                 .map { it.nome },
 
                             onVoltar = {
-                                telaAtual = "generos"
+                                telaAtual = "palavras"
                             }
                         )
 
@@ -150,49 +192,23 @@ fun TelaInicial(
 fun TelaResumo(
     idsGeneros: List<Int>,
     nomesGeneros: List<String>,
+    palavrasChave: List<String>,
     onVoltar: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    var filmes by remember(idsGeneros) {
-        mutableStateOf<List<FilmeDto>>(emptyList())
-    }
+    // Obtém nossa ViewModel
+    val filmesViewModel: FilmesViewModel = viewModel()
 
-    var carregando by remember(idsGeneros) {
-        mutableStateOf(true)
-    }
+    // Observa o estado da busca
+    val estado by filmesViewModel.estado
+        .collectAsStateWithLifecycle()
 
-    var erro by remember(idsGeneros) {
-        mutableStateOf<String?>(null)
-    }
-
-    LaunchedEffect(idsGeneros) {
-        carregando = true
-        erro = null
-
-        try {
-            val filtro = idsGeneros
-                .distinct()
-                .joinToString("|")
-
-            val resposta = RetrofitClient.api.descobrirFilmes(
-                generos = filtro
-            )
-
-            filmes = resposta.results.take(5)
-
-        } catch (e: CancellationException) {
-            throw e
-
-        } catch (e: HttpException) {
-            erro = "Erro HTTP ${e.code()} ao consultar o TMDB."
-
-        } catch (e: Exception) {
-            erro = "Não foi possível buscar os filmes. " +
-                    "Verifique sua conexão com a internet."
-
-        } finally {
-            carregando = false
-        }
+    // Solicita os filmes ao entrar na tela
+    LaunchedEffect(idsGeneros, palavrasChave) {
+        filmesViewModel.buscarFilmes(
+            idsGeneros = idsGeneros,
+            palavrasChave = palavrasChave
+        )
     }
 
     Column(
@@ -212,24 +228,36 @@ fun TelaResumo(
             text = "Gêneros: ${nomesGeneros.joinToString(", ")}"
         )
 
+        Spacer(modifier = Modifier.height(12.dp))
+
+        Text(
+            text = if (palavrasChave.isEmpty()) {
+                "Nenhuma palavra-chave adicionada."
+            } else {
+                "Temas escolhidos: ${palavrasChave.joinToString(", ")}"
+            }
+        )
+
         Spacer(modifier = Modifier.height(24.dp))
 
-        when {
-            carregando -> {
+        // Exibe o conteúdo conforme o estado da ViewModel
+        when (val resultado = estado) {
+
+            EstadoBuscaFilmes.Inicial -> {
+                Text("Preparando busca...")
+            }
+
+            EstadoBuscaFilmes.Carregando -> {
                 CircularProgressIndicator()
+
+                Spacer(modifier = Modifier.height(12.dp))
+
                 Text("Buscando filmes no TMDB...")
             }
 
-            erro != null -> {
-                Text(erro ?: "Erro desconhecido.")
-            }
+            is EstadoBuscaFilmes.Sucesso -> {
+                resultado.filmes.forEachIndexed { index, filme ->
 
-            filmes.isEmpty() -> {
-                Text("Nenhum filme encontrado.")
-            }
-
-            else -> {
-                filmes.forEachIndexed { index, filme ->
                     Text(
                         text = "${index + 1}. ${filme.title}",
                         style = MaterialTheme.typography.titleMedium
@@ -244,6 +272,14 @@ fun TelaResumo(
                     Spacer(modifier = Modifier.height(16.dp))
                 }
             }
+
+            EstadoBuscaFilmes.SemResultados -> {
+                Text("Nenhum filme encontrado.")
+            }
+
+            is EstadoBuscaFilmes.Erro -> {
+                Text(resultado.mensagem)
+            }
         }
 
         Spacer(modifier = Modifier.height(24.dp))
@@ -252,8 +288,7 @@ fun TelaResumo(
             onClick = onVoltar,
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text("Alterar gêneros")
+            Text("Alterar preferências")
         }
     }
 }
-
