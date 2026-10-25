@@ -13,6 +13,7 @@
 .externalNativeBuild
 .cxx
 local.properties
+/tmdb.properties
 # Arquivos gerados pela compilação
 **/build/
 

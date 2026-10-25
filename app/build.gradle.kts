@@ -1,7 +1,22 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
 }
+
+
+val tmdbProperties = Properties().apply {
+    val arquivo = rootProject.file("tmdb.properties")
+
+    if (arquivo.exists()) {
+        arquivo.inputStream().use { load(it) }
+    }
+}
+
+val tmdbReadToken =
+    tmdbProperties.getProperty("TMDB_READ_TOKEN", "")
+
 
 android {
     namespace = "com.example.filmedavez"
@@ -17,6 +32,12 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        buildConfigField(
+            "String",
+            "TMDB_READ_TOKEN",
+            "\"$tmdbReadToken\""
+        )
     }
 
     buildTypes {
@@ -33,6 +54,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 
@@ -52,4 +74,7 @@ dependencies {
     androidTestImplementation(libs.androidx.junit)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
     debugImplementation(libs.androidx.compose.ui.tooling)
+    implementation(libs.retrofit.core)
+    implementation(libs.retrofit.gson)
+
 }
