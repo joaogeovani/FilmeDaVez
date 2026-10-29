@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import retrofit2.HttpException
 import java.io.IOException
+import com.example.filmedavez.model.FiltrosFilmes
 
 // Representa os estados possíveis da busca
 sealed interface EstadoBuscaFilmes {
@@ -44,7 +45,8 @@ class FilmesViewModel(
 
     fun buscarFilmes(
         idsGeneros: List<Int>,
-        palavrasChave: List<String>
+        palavrasChave: List<String>,
+        filtros: FiltrosFilmes
     ) {
         viewModelScope.launch {
 
@@ -54,7 +56,8 @@ class FilmesViewModel(
                 val filmes =
                     repository.buscarFilmesPorPreferencias(
                         idsGeneros = idsGeneros,
-                        palavrasChave = palavrasChave
+                        palavrasChave = palavrasChave,
+                        filtros= filtros
                     )
 
                 _estado.value = if (filmes.isEmpty()) {

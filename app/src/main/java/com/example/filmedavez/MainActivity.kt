@@ -23,6 +23,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.filmedavez.ui.viewmodel.FilmesViewModel
 import com.example.filmedavez.ui.viewmodel.EstadoBuscaFilmes
+import com.example.filmedavez.model.FiltrosFilmes
+import com.example.filmedavez.ui.screens.TelaFiltrosFilmes
 
 
 class MainActivity : ComponentActivity() {
@@ -48,10 +50,16 @@ class MainActivity : ComponentActivity() {
                     mutableStateOf(emptyList<String>())
                 }
 
+                // Armazena os filtros escolhidos pelo usuário
+                var filtrosSelecionados by remember {
+                    mutableStateOf(FiltrosFilmes())
+                }
+
                 // Controla o botão Voltar do Android
                 BackHandler(enabled = telaAtual != "inicio") {
                     telaAtual = when (telaAtual) {
-                        "resumo" -> "palavras"
+                        "resumo" -> "filtros"
+                        "filtros" -> "palavras"
                         "palavras" -> "generos"
                         "generos" -> "inicio"
                         else -> "inicio"
@@ -119,7 +127,7 @@ class MainActivity : ComponentActivity() {
                             },
 
                             onContinuar = {
-                                telaAtual = "resumo"
+                                telaAtual = "filtros"
                             },
 
                             onVoltar = {
@@ -138,10 +146,28 @@ class MainActivity : ComponentActivity() {
                                 .filter { it.id in generosSelecionados }
                                 .map { it.nome },
 
+                            filtros = filtrosSelecionados,
+
                             onVoltar = {
-                                telaAtual = "palavras"
+                                telaAtual = "filtros"
                             }
                         )
+
+                        "filtros" -> {
+                            TelaFiltrosFilmes(
+                                filtros = filtrosSelecionados,
+
+                                onContinuar = { novosFiltros ->
+                                    filtrosSelecionados = novosFiltros
+                                    telaAtual = "resumo"
+                                },
+
+                                onVoltar = {
+                                    telaAtual = "palavras"
+                                }
+                            )
+                        }
+
 
                     }
                 }
@@ -193,6 +219,7 @@ fun TelaResumo(
     idsGeneros: List<Int>,
     nomesGeneros: List<String>,
     palavrasChave: List<String>,
+    filtros: FiltrosFilmes,
     onVoltar: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -207,7 +234,8 @@ fun TelaResumo(
     LaunchedEffect(idsGeneros, palavrasChave) {
         filmesViewModel.buscarFilmes(
             idsGeneros = idsGeneros,
-            palavrasChave = palavrasChave
+            palavrasChave = palavrasChave,
+            filtros = filtros
         )
     }
 
