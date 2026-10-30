@@ -22,7 +22,9 @@ object PaginadorTmdb {
     suspend fun percorrerPaginas(
         consultarPagina: suspend (Int) -> RespostaFilmesDto,
         aoReceberFilmes: (List<FilmeDto>) -> Unit,
-        aoAtualizarProgresso: (Int, Int) -> Unit = { _, _ -> }
+        aoAtualizarProgresso: (Int, Int) -> Unit = { _, _ -> },
+        limitePaginas: Int = 3
+
     ): ResultadoPaginacaoTmdb {
 
         // Consulta a primeira página
@@ -35,8 +37,10 @@ object PaginadorTmdb {
             .coerceAtLeast(0)
 
         // A API permite consultar até a página 500
-        val ultimaPagina = totalPaginas
-            .coerceIn(1, LIMITE_PAGINAS_API)
+        val ultimaPagina = minOf(
+            totalPaginas.coerceAtLeast(1),
+            limitePaginas.coerceIn(1, LIMITE_PAGINAS_API)
+        )
 
         aoReceberFilmes(primeiraResposta.results)
 

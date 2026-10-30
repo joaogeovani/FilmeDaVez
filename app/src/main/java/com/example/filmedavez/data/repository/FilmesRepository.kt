@@ -7,6 +7,7 @@ import com.example.filmedavez.data.remote.dto.RespostaFilmesDto
 import com.example.filmedavez.model.AnalisadorSinopse
 import com.example.filmedavez.model.FiltrosFilmes
 import com.example.filmedavez.model.NormalizadorTemas
+import com.example.filmedavez.data.remote.PaginadorTmdb
 
 class FilmesRepository(
     private val apiService: TmdbApiService = RetrofitClient.api
@@ -15,7 +16,8 @@ class FilmesRepository(
     suspend fun buscarFilmesPorPreferencias(
         idsGeneros: List<Int>,
         palavrasChave: List<String>,
-        filtros: FiltrosFilmes = FiltrosFilmes()
+        filtros: FiltrosFilmes = FiltrosFilmes(),
+        aoAtualizarProgresso: (Int, Int, String) -> Unit = { _, _, _ -> }
     ): List<FilmeDto> {
 
         require(idsGeneros.isNotEmpty()) {
@@ -81,41 +83,69 @@ class FilmesRepository(
             }
             .distinct()
 
-        // Filmes encontrados pelas palavras-chave
-        val filmesFiltrados =
-            if (idsPalavrasChave.isNotEmpty()) {
+        // Armazena os filmes encontrados pelas palavras-chave
+        val filmesFiltrados = mutableListOf<FilmeDto>()
 
-                consultarPagina(
-                    pagina = 1,
-                    idsTemas = idsPalavrasChave.joinToString("|")
-                ).results
+        if (idsPalavrasChave.isNotEmpty()) {
 
-            } else {
-                emptyList()
-            }
+            val filtroTemas = idsPalavrasChave.joinToString("|")
 
-        // Filmes encontrados pelos gêneros
-        val primeiraPagina = consultarPagina(pagina = 1)
+            PaginadorTmdb.percorrerPaginas(
 
-        val filmesPorGeneros =
-            primeiraPagina.results.toMutableList()
+                limitePaginas = 500,
 
-        // Limite temporário: ampliaremos a paginação depois
-        val ultimaPagina = minOf(
-            3,
-            primeiraPagina.totalPages
-        )
+                consultarPagina = { pagina ->
+                    consultarPagina(
+                        pagina = pagina,
+                        idsTemas = filtroTemas
+                    )
+                },
 
-        for (pagina in 2..ultimaPagina) {
+                aoReceberFilmes = { filmesPagina ->
+                    filmesFiltrados.addAll(filmesPagina)
+                },
 
-            val resposta = consultarPagina(
-                pagina = pagina
-            )
-
-            filmesPorGeneros.addAll(
-                resposta.results
+                aoAtualizarProgresso = { atual, total ->
+                    aoAtualizarProgresso(
+                        atual,
+                        total,
+                        "Consultando filmes por palavras-chave"
+                    )
+                }
             )
         }
+
+
+
+        // Lista que armazenará os filmes encontrados
+        val filmesPorGeneros = mutableListOf<FilmeDto>()
+
+        // Consulta as páginas utilizando nosso paginador
+        PaginadorTmdb.percorrerPaginas(
+
+            // Mantemos três páginas apenas durante a integração
+            limitePaginas = 500,
+
+            // Realiza a consulta ao TMDB
+            consultarPagina = { pagina ->
+                consultarPagina(pagina = pagina)
+            },
+
+            // Adiciona os filmes de cada página à lista
+            aoReceberFilmes = { filmesPagina ->
+                filmesPorGeneros.addAll(filmesPagina)
+            },
+
+            // Comunica quantas páginas foram consultadas
+            aoAtualizarProgresso = { atual, total ->
+                aoAtualizarProgresso(
+                    atual,
+                    total,
+                    "Consultando filmes por gêneros"
+                )
+            }
+        )
+
 
         // Identifica os filmes encontrados pelos temas
         val idsFilmesPorTemas = filmesFiltrados

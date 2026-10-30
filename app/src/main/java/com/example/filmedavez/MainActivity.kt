@@ -25,7 +25,9 @@ import com.example.filmedavez.ui.viewmodel.FilmesViewModel
 import com.example.filmedavez.ui.viewmodel.EstadoBuscaFilmes
 import com.example.filmedavez.model.FiltrosFilmes
 import com.example.filmedavez.ui.screens.TelaFiltrosFilmes
-
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.material3.LinearProgressIndicator
+import com.example.filmedavez.ui.components.BarraProgressoFilme
 
 class MainActivity : ComponentActivity() {
 
@@ -230,13 +232,24 @@ fun TelaResumo(
     val estado by filmesViewModel.estado
         .collectAsStateWithLifecycle()
 
+// Observa o andamento da paginação
+    val progresso by filmesViewModel.progresso
+        .collectAsStateWithLifecycle()
+
     // Solicita os filmes ao entrar na tela
-    LaunchedEffect(idsGeneros, palavrasChave) {
+    LaunchedEffect(idsGeneros, palavrasChave,filtros) {
         filmesViewModel.buscarFilmes(
             idsGeneros = idsGeneros,
             palavrasChave = palavrasChave,
             filtros = filtros
         )
+    }
+
+    DisposableEffect(filmesViewModel) {
+
+        onDispose {
+            filmesViewModel.cancelarBusca()
+        }
     }
 
     Column(
@@ -276,12 +289,56 @@ fun TelaResumo(
             }
 
             EstadoBuscaFilmes.Carregando -> {
+
                 CircularProgressIndicator()
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Text("Buscando filmes compatíveis...")
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                Text("Buscando filmes no TMDB...")
+                if (progresso.totalPaginas > 0) {
+
+                    Text(
+                        text = progresso.etapa,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Text(
+                        text = "Página ${progresso.paginaAtual} " +
+                                "de ${progresso.totalPaginas}"
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    BarraProgressoFilme(
+                        progresso = (
+                                progresso.paginaAtual.toFloat() /
+                                        progresso.totalPaginas.toFloat()
+                                ).coerceIn(0f, 1f),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                } else {
+
+                    Text("Preparando a pesquisa...")
+                }
+
+                Spacer(modifier = Modifier.height(20.dp))
+
+                OutlinedButton(
+                    onClick = {
+                        filmesViewModel.cancelarBusca()
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Cancelar busca")
+                }
             }
+
 
             is EstadoBuscaFilmes.Sucesso -> {
                 resultado.filmes.forEachIndexed { index, filme ->
@@ -303,6 +360,18 @@ fun TelaResumo(
 
             EstadoBuscaFilmes.SemResultados -> {
                 Text("Nenhum filme encontrado.")
+            }
+
+            EstadoBuscaFilmes.Cancelada -> {
+
+                Text("Busca cancelada.")
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Text(
+                    "Você pode voltar aos filtros " +
+                            "para ajustar sua pesquisa."
+                )
             }
 
             is EstadoBuscaFilmes.Erro -> {
