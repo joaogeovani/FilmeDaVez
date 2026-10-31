@@ -28,6 +28,8 @@ import com.example.filmedavez.ui.screens.TelaFiltrosFilmes
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.material3.LinearProgressIndicator
 import com.example.filmedavez.ui.components.BarraProgressoFilme
+import com.example.filmedavez.ui.screens.TelaDetalhesFilme
+import com.example.filmedavez.ui.viewmodel.EstadoDetalhesFilme
 
 class MainActivity : ComponentActivity() {
 
@@ -232,8 +234,14 @@ fun TelaResumo(
     val estado by filmesViewModel.estado
         .collectAsStateWithLifecycle()
 
-// Observa o andamento da paginação
+    val estadoDetalhes by filmesViewModel.estadoDetalhes
+        .collectAsStateWithLifecycle()
+
+    // Observa o andamento da paginação
     val progresso by filmesViewModel.progresso
+        .collectAsStateWithLifecycle()
+
+    val estadoOndeAssistir by filmesViewModel.estadoOndeAssistir
         .collectAsStateWithLifecycle()
 
     // Solicita os filmes ao entrar na tela
@@ -249,6 +257,8 @@ fun TelaResumo(
 
         onDispose {
             filmesViewModel.cancelarBusca()
+            filmesViewModel.limparDetalhesFilme()
+            filmesViewModel.limparOndeAssistir()
         }
     }
 
@@ -339,23 +349,117 @@ fun TelaResumo(
                 }
             }
 
-
             is EstadoBuscaFilmes.Sucesso -> {
-                resultado.filmes.forEachIndexed { index, filme ->
 
-                    Text(
-                        text = "${index + 1}. ${filme.title}",
-                        style = MaterialTheme.typography.titleMedium
+                val filmes = resultado.filmes
+
+                // Um único filme é selecionado automaticamente
+                var indiceSorteado by remember(filmes) {
+                    mutableStateOf<Int?>(
+                        if (filmes.size == 1) 0 else null
                     )
+                }
+
+                Text(
+                    text = "${filmes.size} filme(s) compatível(is)",
+                    style = MaterialTheme.typography.titleMedium
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Sorteio disponível somente com dois ou mais filmes
+                if (filmes.size > 1) {
+
+                    Button(
+                        onClick = {
+
+                            // Evita repetir imediatamente o último filme
+                            val opcoes = filmes.indices.filter {
+                                it != indiceSorteado
+                            }
+
+                            indiceSorteado = opcoes.random()
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            if (indiceSorteado == null) {
+                                "Sortear filme"
+                            } else {
+                                "Sortear outro filme"
+                            }
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(20.dp))
+                }
+
+                // Recupera o filme escolhido no sorteio
+                val filmeEscolhido = indiceSorteado?.let {
+                    filmes[it]
+                }
+
+                LaunchedEffect(filmeEscolhido?.id) {
+
+                    if (filmeEscolhido != null) {
+
+                        // Busca informações completas
+                        filmesViewModel.buscarDetalhesFilme(
+                            filmeId = filmeEscolhido.id
+                        )
+
+                        // Busca as plataformas disponíveis no Brasil
+                        filmesViewModel.buscarOndeAssistir(
+                            filmeId = filmeEscolhido.id
+                        )
+
+                    } else {
+
+                        filmesViewModel.limparDetalhesFilme()
+                        filmesViewModel.limparOndeAssistir()
+                    }
+                }
+
+
+                if (filmeEscolhido != null) {
 
                     Text(
-                        text = "Nota TMDB: ${
-                            String.format("%.1f", filme.voteAverage)
-                        }/10"
+                        text = if (filmes.size == 1) {
+                            "Seu filme recomendado!"
+                        } else {
+                            "Filme sorteado!"
+                        },
+                        style = MaterialTheme.typography.titleLarge
                     )
 
                     Spacer(modifier = Modifier.height(16.dp))
+
+                    TelaDetalhesFilme(
+                        filme = filmeEscolhido,
+                        estadoDetalhes = estadoDetalhes,
+                        estadoOndeAssistir = estadoOndeAssistir,
+
+                        onTentarNovamente = {
+                            filmesViewModel.buscarDetalhesFilme(
+                                filmeId = filmeEscolhido.id
+                            )
+                        },
+
+                        onTentarNovamenteOndeAssistir = {
+                            filmesViewModel.buscarOndeAssistir(
+                                filmeId = filmeEscolhido.id
+                            )
+                        }
+                    )
+
+                } else {
+
+                    Text(
+                        text = "Tudo pronto! Clique em Sortear filme " +
+                                "para descobrir o que assistir."
+                    )
                 }
+
             }
 
             EstadoBuscaFilmes.SemResultados -> {

@@ -8,6 +8,8 @@ import com.example.filmedavez.model.AnalisadorSinopse
 import com.example.filmedavez.model.FiltrosFilmes
 import com.example.filmedavez.model.NormalizadorTemas
 import com.example.filmedavez.data.remote.PaginadorTmdb
+import com.example.filmedavez.data.remote.dto.DetalhesFilmeDto
+import com.example.filmedavez.data.remote.dto.DisponibilidadePorPaisDto
 
 class FilmesRepository(
     private val apiService: TmdbApiService = RetrofitClient.api
@@ -230,7 +232,30 @@ class FilmesRepository(
                     }
             )
 
-        // Temporariamente mantemos cinco resultados
+        // Temporariamente mantemos dez resultados
         return filmesOrdenados.take(10)
+    }
+
+    // Busca as informações completas de um filme específico
+    suspend fun buscarDetalhesFilme(
+        filmeId: Int
+    ): DetalhesFilmeDto {
+
+        return apiService.buscarDetalhesFilme(
+            filmeId = filmeId
+        )
+    }
+
+    // Busca onde o filme está disponível no Brasil
+    suspend fun buscarOndeAssistir(
+        filmeId: Int
+    ): DisponibilidadePorPaisDto? {
+
+        val resposta = apiService.buscarOndeAssistir(
+            filmeId = filmeId
+        )
+
+        // Seleciona apenas as plataformas do Brasil
+        return resposta.results?.get("BR")
     }
 }
