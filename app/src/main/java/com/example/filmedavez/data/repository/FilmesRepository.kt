@@ -194,7 +194,7 @@ class FilmesRepository(
                 compareByDescending<FilmeDto> { filme ->
 
                     val generosCorrespondentes =
-                        filme.genreIds.count {
+                        filme.genreIds.orEmpty().count {
                             it in generosEscolhidos
                         }
 

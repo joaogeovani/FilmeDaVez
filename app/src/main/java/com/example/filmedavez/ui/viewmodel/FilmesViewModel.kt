@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import retrofit2.HttpException
+import android.util.Log
 import java.io.IOException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -179,11 +180,20 @@ class FilmesViewModel(
                     "Verifique sua conexão com a internet."
                 )
 
+
             } catch (e: Exception) {
+
+                Log.e(
+                    "FilmeDaVez",
+                    "Erro inesperado durante a busca de filmes",
+                    e
+                )
+
                 _estado.value = EstadoBuscaFilmes.Erro(
                     "Não foi possível buscar os filmes."
                 )
             }
+
         }
     }
 

@@ -2,10 +2,16 @@ package com.example.filmedavez.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-val Purple80 = Color(0xFFD0BCFF)
-val PurpleGrey80 = Color(0xFFCCC2DC)
-val Pink80 = Color(0xFFEFB8C8)
+// Paleta principal do FilmeDaVez
+val FundoCinema = Color(0xFF14181C)
+val SuperficieCinema = Color(0xFF445566)
 
-val Purple40 = Color(0xFF6650a4)
-val PurpleGrey40 = Color(0xFF625b71)
-val Pink40 = Color(0xFF7D5260)
+val LaranjaCinema = Color(0xFFFF8000)
+val VerdeCinema = Color(0xFF00E054)
+val AzulCinema = Color(0xFF40BCF4)
+
+// Cores complementares
+val SuperficieEscura = Color(0xFF26313A)
+val TextoPrincipal = Color(0xFFF9FAFB)
+val TextoSecundario = Color(0xFFD8E0E6)
+val BordaCinema = Color(0xFF788B99)
