@@ -48,6 +48,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.background
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 
 class MainActivity : ComponentActivity() {
 
@@ -226,6 +229,10 @@ fun TelaInicial(
         )
     )
 
+    var mostrarCreditos by rememberSaveable {
+        mutableStateOf(false)
+    }
+
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -385,7 +392,27 @@ fun TelaInicial(
             )
         }
 
+        TextButton(
+            onClick = {
+                mostrarCreditos = true
+            },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text(
+                text = "Sobre o aplicativo",
+                color = cores.onSurfaceVariant
+            )
+        }
+
         Spacer(modifier = Modifier.height(12.dp))
+    }
+
+    if (mostrarCreditos) {
+        DialogoCreditosTmdb(
+            onFechar = {
+                mostrarCreditos = false
+            }
+        )
     }
 }
 
@@ -842,4 +869,90 @@ private fun CartaoEstadoBuscaCinema(
             conteudo()
         }
     }
+}
+
+@Composable
+private fun DialogoCreditosTmdb(
+    onFechar: () -> Unit
+) {
+    val cores = MaterialTheme.colorScheme
+
+    AlertDialog(
+        onDismissRequest = onFechar,
+
+        title = {
+            Text(
+                text = "Sobre o FilmeDaVez",
+                color = cores.onBackground,
+                fontWeight = FontWeight.Bold
+            )
+        },
+
+        text = {
+            Column(
+                verticalArrangement =
+                    Arrangement.spacedBy(16.dp)
+            ) {
+
+                Text(
+                    text = "FilmeDaVez é um projeto pessoal " +
+                            "desenvolvido para estudos de " +
+                            "Android com Kotlin e Jetpack Compose.",
+                    color = cores.onSurfaceVariant
+                )
+
+                HorizontalDivider()
+
+                Image(
+                    painter = painterResource(
+                        id = R.drawable.tmdb_logo
+                    ),
+                    contentDescription =
+                        "Logotipo oficial do TMDB",
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(65.dp),
+                    contentScale = ContentScale.Fit
+                )
+
+                Text(
+                    text = "Os dados e imagens dos filmes " +
+                            "são fornecidos pelo The Movie " +
+                            "Database (TMDB).",
+                    color = cores.onSurfaceVariant
+                )
+
+                Text(
+                    text = "This product uses the TMDB API " +
+                            "but is not endorsed or certified by TMDB.",
+                    color = cores.onSurfaceVariant,
+                    style = MaterialTheme.typography.bodySmall
+                )
+
+                Text(
+                    text = "Informações de disponibilidade " +
+                            "fornecidas pelo JustWatch, via TMDB.",
+                    color = cores.onSurfaceVariant,
+                    style = MaterialTheme.typography.bodySmall
+                )
+
+                Text(
+                    text = "Desenvolvido por João Geovani de Camargo.",
+                    color = cores.onSurfaceVariant,
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
+        },
+
+        confirmButton = {
+            TextButton(onClick = onFechar) {
+                Text(
+                    text = "Fechar",
+                    color = cores.primary
+                )
+            }
+        },
+
+        containerColor = cores.surfaceVariant
+    )
 }
