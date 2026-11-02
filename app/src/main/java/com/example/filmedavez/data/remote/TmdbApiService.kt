@@ -4,6 +4,7 @@ import com.example.filmedavez.data.remote.dto.RespostaFilmesDto
 import com.example.filmedavez.data.remote.dto.RespostaPalavrasChaveDto
 import com.example.filmedavez.data.remote.dto.DetalhesFilmeDto
 import com.example.filmedavez.data.remote.dto.DisponibilidadeFilmeDto
+import com.example.filmedavez.data.remote.dto.DatasLancamentoTmdbDto
 import retrofit2.http.GET
 import retrofit2.http.Query
 import retrofit2.http.Path
@@ -81,6 +82,11 @@ interface TmdbApiService {
         filmeId: Int
 
     ): DisponibilidadeFilmeDto
+
+    @GET("movie/{movie_id}/release_dates")
+    suspend fun buscarDatasLancamento(
+        @Path("movie_id") filmeId: Int
+    ): DatasLancamentoTmdbDto
 
 }
 
