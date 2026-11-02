@@ -17,6 +17,11 @@ local.properties
 # Arquivos gerados pela compilação
 **/build/
 
+# Arquivos de distribuicao
+/app/release/
+*.apk
+*.aab
+
 # Credenciais e configurações sensíveis
 .env
 .env.*
